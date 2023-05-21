@@ -57,6 +57,7 @@ namespace TaskLike
             if (_disposedValue) return; // Try lock free read first.
             lock (this) { if (_disposedValue) return; }
             _sync.Wait();
+            Dispose(disposing: true);
         }
 
         // Called by the awaiter when the result is requested (either manually by getting the awaiter, or when using the await keyword).
@@ -68,7 +69,6 @@ namespace TaskLike
             _result = new Box<T>(value);
             _tcs?.SetResult(Response.Create(value));
             _sync.Release(1);
-            Dispose(disposing: true);
         }
 
         // Called by the state machine when the method has thrown an exception.
@@ -77,7 +77,6 @@ namespace TaskLike
             ex.LogError();
             _tcs?.SetException(ex);
             _sync.Release(1);
-            Dispose(disposing: true);
         }
 
         private void Dispose(bool disposing)

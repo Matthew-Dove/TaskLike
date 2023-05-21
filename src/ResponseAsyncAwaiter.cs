@@ -12,7 +12,7 @@ namespace TaskLike
 
         private readonly ResponseAsync<T> _response;
 
-        public ResponseAsyncAwaiter(ResponseAsync<T> response)
+        internal ResponseAsyncAwaiter(ResponseAsync<T> response)
         {
             _response = response;
         }
