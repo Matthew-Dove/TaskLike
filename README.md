@@ -50,7 +50,7 @@ private static async ResponseAsync<int> ThrowError02() { await Task.CompletedTas
 ```
 
 All errors are sent to your own logging system, which is configured at startup.  
-You can also convert `ResponseAsync<T>` into a `Task<Response<T>>`, so you can use `Task's` native functions, like `WhenAll()`:
+You can also convert `ResponseAsync<T>` into `Task<Response<T>>`, so you can use `Task's` native functions, such as  `WhenAll()`:
 
 ```cs
         public async ValueTask Play()
@@ -67,12 +67,6 @@ You can also convert `ResponseAsync<T>` into a `Task<Response<T>>`, so you can u
             return await Task.Delay(1).ContinueWith(_ => 1);
         }
 ```
-
-If you are concerned about `Where`, and `Sum` both doing the same thing?!?  
-Don't worry too much about it, `Where` casts to boolean making sure each `Response` has a value; then `Sum` treats `Response` as standard `ints` from that point.  
-This is what it would look like if I took away the implicit type casting: `results.Where(x => x.IsValid).Sum(x => x.Value)`.  
-Though that magic has nothing to do with the custom awaiter, or async method builder from this project; that type comes from [ContainerExpressions](https://github.com/Matthew-Dove/ContainerExpressions).  
-It's just that this `Response<T>` is the task-like type I'm returning from the `async await` process.  
 
 ## Remarks
 
