@@ -47,11 +47,7 @@ namespace TaskLike
 
         private static readonly bool _isResponseType;
 
-        static ResponseAsyncValueTaskCompletionSource()
-        {
-            var t = typeof(T);
-            _isResponseType = t.IsGenericType && !t.IsClass && t.GenericTypeArguments.Length == 1 && t.Name.StartsWith("Response");
-        }
+        static ResponseAsyncValueTaskCompletionSource() { _isResponseType = typeof(T).Equals(new Response<T>(default(T)).Value.GetType()); }
 
         public ValueTask<T> Task => new ValueTask<T>(_tcs.Task);
 
@@ -87,11 +83,7 @@ namespace TaskLike
 
         private static readonly bool _isResponseType;
 
-        static ResponseAsyncTaskCompletionSource()
-        {
-            var t = typeof(T);
-            _isResponseType = t.IsGenericType && !t.IsClass && t.GenericTypeArguments.Length == 1 && t.Name.StartsWith("Response");
-        }
+        static ResponseAsyncTaskCompletionSource() { _isResponseType = typeof(T).Equals(new Response<T>(default(T)).Value.GetType()); }
 
         public Task<T> Task => _tcs.Task;
 
