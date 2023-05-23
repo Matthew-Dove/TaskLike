@@ -4,7 +4,7 @@ namespace TaskLike
 {
     file sealed class Box<T> : Alias<T> { public Box(T value) : base(value) { } } // Force T on the heap, so we can mark it volatile; and skip a lock.
 
-    // Bag things for ResponseAsync{T}, so we can make it a readonly struct.
+    // Bag of things for ResponseAsync{T}, so we can make it a readonly struct.
     file sealed class Bag<T>
     {
         public volatile Box<T> Box;
