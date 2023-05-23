@@ -4,6 +4,31 @@ namespace TaskLike
 {
     file sealed class Box<T> : Alias<T> { public Box(T value) : base(value) { } } // Force T on the heap, so we can mark it volatile; and skip a lock.
 
+    // Bag things for ResponseAsync{T}, so we can make it a readonly struct.
+    file sealed class Bag<T>
+    {
+        public volatile Box<T> Box;
+        public readonly ManualResetEventSlim Sync;
+        public bool IsDisposed;
+        public volatile TaskCompletionSource<Response<T>> Tcs;
+
+        public Bag(T result)
+        {
+            Box = new Box<T>(result);
+            Sync = null;
+            IsDisposed = true;
+            Tcs = null;
+        }
+
+        public Bag()
+        {
+            Box = null;
+            Sync = new ManualResetEventSlim(false);
+            IsDisposed = false;
+            Tcs = null;
+        }
+    }
+
     /**
     * General flow for the task-like type ResponseAsync{T}:
     * 1) Create the custom async method builder.
@@ -12,29 +37,14 @@ namespace TaskLike
     * 4) When the method result returns (or an exception is thrown / task is canceled), inform the awaiter the task is completed; and the result is ready.
     **/
     [AsyncMethodBuilder(typeof(ResponseAsyncMethodBuilder<>))]
-    public sealed class ResponseAsync<T> : IDisposable
+    public readonly struct ResponseAsync<T> : IDisposable
     {
-        private volatile Box<T> _box;
-        private readonly ManualResetEventSlim _sync;
-        private bool _isDisposed;
-        private volatile TaskCompletionSource<Response<T>> _tcs;
+        private readonly Bag<T> _bag;
 
         // Use this constructor when you already have the value to set (i.e. T is pre-calculated).
-        public ResponseAsync(T result)
-        {
-            _box = new Box<T>(result);
-            _sync = null;
-            _isDisposed = true;
-            _tcs = null;
-        }
+        public ResponseAsync(T result) { _bag = new Bag<T>(result); }
 
-        internal ResponseAsync()
-        {
-            _box = null;
-            _sync = new ManualResetEventSlim(false);
-            _isDisposed = false;
-            _tcs = null;
-        }
+        public ResponseAsync() { _bag = new Bag<T>(); }
 
         // Static helper for the public constructor to set the result.
         public static ResponseAsync<T> FromResult(T result) => new ResponseAsync<T>(result);
@@ -42,74 +52,74 @@ namespace TaskLike
         // Convert into a Task{T} type.
         public Task<Response<T>> AsTask()
         {
-            if (_tcs == null)
+            if (_bag.Tcs == null)
             {
-                lock (this) // The user calls this (from who knows where, how many times), and we only want the tcs created once.
+                lock (_bag.Sync) // The user calls this (from who knows where, how many times), and we only want the tcs created once.
                 {
-                    if (_tcs == null)
+                    if (_bag.Tcs == null)
                     {
-                        _tcs = new TaskCompletionSource<Response<T>>();
-                        if (_isDisposed)
+                        _bag.Tcs = new TaskCompletionSource<Response<T>>();
+                        if (_bag.IsDisposed)
                         {
-                            var box = _box;
-                            if (box != null) _tcs.SetResult(Response.Create(box.Value)); // Task is already completed.
-                            else _tcs.SetCanceled(); // There is no result, as the task generated an exception, or was canceled.
+                            var box = _bag.Box;
+                            if (box != null) _bag.Tcs.SetResult(Response.Create(box.Value)); // Task is already completed.
+                            else _bag.Tcs.SetCanceled(); // There is no result, as the task generated an exception, or was canceled.
 
                         }
                     }
                 }
             }
-            return _tcs.Task;
+            return _bag.Tcs.Task;
         }
 
         // When true, the value is ready to be read.
-        internal bool IsCompleted() { if (_isDisposed) return true; lock (this) { return _isDisposed; } } // Try lock free read first.
+        internal bool IsCompleted() { if (_bag.IsDisposed) return true; lock (_bag.Sync) { return _bag.IsDisposed; } } // Try lock free read first.
 
         // Called by the awaiter, after the state machine has finished, and before the result has been calculated (when using the await keyword).
         internal void Wait()
         {
-            if (_isDisposed) return; // Try lock free read first.
-            lock (this) { if (_isDisposed) return; }
-            _sync.Wait();
+            if (_bag.IsDisposed) return; // Try lock free read first.
+            lock (_bag.Sync) { if (_bag.IsDisposed) return; }
+            _bag.Sync.Wait();
             Dispose(disposing: true);
         }
 
         // Called by the awaiter when the result is requested (either manually by getting the awaiter, or when using the await keyword).
         internal Response<T> GetValue()
         {
-            var box = _box;
+            var box = _bag.Box;
             return box == null ? new Response<T>() : new Response<T>(box.Value); // If null, then a result was never set for this task.
         }
 
         // Called by the state machine when the method has returned a result.
         internal void SetValue(T value)
         {
-            _box = new Box<T>(value);
-            _tcs?.SetResult(Response.Create(value));
-            _sync.Set();
+            _bag.Box = new Box<T>(value);
+            _bag.Tcs?.SetResult(Response.Create(value));
+            _bag.Sync.Set();
         }
 
         // Called by the state machine when the method has thrown an exception.
         internal void SetException(Exception ex)
         {
             ex.LogError();
-            _tcs?.SetException(ex);
-            _sync.Set();
+            _bag.Tcs?.SetException(ex);
+            _bag.Sync.Set();
         }
 
         private void Dispose(bool disposing)
         {
-            if (!_isDisposed)
+            if (!_bag.IsDisposed)
             {
-                lock (this)
+                lock (_bag.Sync)
                 {
-                    if (!_isDisposed) // This disposed flag also tells us the task is finished (when true).
+                    if (!_bag.IsDisposed) // This disposed flag also tells us the task is finished (when true).
                     {
                         if (disposing)
                         {
-                            _sync.Dispose();
+                            _bag.Sync.Dispose();
                         }
-                        _isDisposed = true;
+                        _bag.IsDisposed = true;
                     }
                 }
             }
