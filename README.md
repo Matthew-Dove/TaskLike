@@ -38,8 +38,8 @@ For example this is fine now:
 public async ValueTask Play()
 {
     // Error handling.
-    Response<int> err01 = await ThrowError01(); // No await.
-    Response<int> err02 = await ThrowError02(); // With await.
+    Response<int> err01 = await ThrowError01();
+    Response<int> err02 = await ThrowError02();
 
     int result = err01 && err02 ? err01 + err02 : -1;
     // result is "-1" here, as both responses failed.

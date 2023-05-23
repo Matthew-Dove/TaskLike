@@ -5,7 +5,7 @@ namespace TaskLike
     public class PlayGround
     {
         [AsyncMethodBuilder(typeof(ResponseAsyncValueTaskCompletionSource<>))]
-        public async ValueTask<Response<string>> Play() // ValueTaskAwaiter
+        public async ValueTask<Response<string>> Play() // ValueTaskAwaiter with custom async method builder.
         {
             // Happy path.
             var response = await Sandbox(); // ResponseAsyncAwaiter
@@ -15,8 +15,8 @@ namespace TaskLike
             Console.WriteLine(ResponseAsync<int>.FromResult(42).GetAwaiter().GetResult().ToString());
 
             // Error handling.
-            await ThrowError01(); // No await.
-            await ThrowError02(); // With await.
+            await ThrowError01();
+            await ThrowError02();
 
             // Many tasks at once.
             Response<int>[] results = await Task.WhenAll(Sandbox().AsTask(), Sandbox()); // Both explicit, and implicit task conversions exist.
