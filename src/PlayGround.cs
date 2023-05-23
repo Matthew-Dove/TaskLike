@@ -4,7 +4,7 @@ namespace TaskLike
 {
     public class PlayGround
     {
-        [AsyncMethodBuilder(typeof(ResponseAsyncValueTaskCompletionSource<>))]
+        [AsyncMethodBuilder(typeof(ResponseAsyncValueTaskSource<>))]
         public async ValueTask<Response<string>> Play() // ValueTaskAwaiter with custom async method builder.
         {
             // Happy path.
@@ -21,7 +21,9 @@ namespace TaskLike
             // Many tasks at once.
             Response<int>[] results = await Task.WhenAll(Sandbox().AsTask(), Sandbox()); // Both explicit, and implicit task conversions exist.
 
-            return Response.Create(string.Empty);
+            throw new NotImplementedException();
+
+            return Response.Create("Hello, World!");
         }
 
         private static async ResponseAsync<int> Sandbox() // AsyncMethodBuilder

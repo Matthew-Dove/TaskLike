@@ -1,7 +1,8 @@
 ﻿Try.SetExceptionLogger(Console.Error.WriteLine); // Exceptions in ResponseAsync methods will be logged here.
 
 var playground = new PlayGround();
-await playground.Play(); // TaskAwaiter
+var msg = await playground.Play();
+Console.WriteLine(msg.GetValueOrDefault("Error!"));
 
 Console.WriteLine("EOF");
 
