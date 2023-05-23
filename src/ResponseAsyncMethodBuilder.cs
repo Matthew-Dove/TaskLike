@@ -193,6 +193,13 @@ namespace TaskLike
         }
     }
 
+    /**
+     * Use on a method returning a ValueTask{Response{T}}, or a ValueTask{T} type.
+     * [AsyncMethodBuilder(typeof(ResponseAsyncValueTaskSource{}))]
+     * 
+     * The main difference between this, and ResponseAsyncValueTaskCompletionSource, is that ValueTaskSource is cheaper to use than TaskCompletionSource.
+     * That said, both async method builders have the same logical effect.
+    **/
     public readonly struct ResponseAsyncValueTaskSource<T>
     {
         public static ResponseAsyncValueTaskSource<T> Create() => new ResponseAsyncValueTaskSource<T>();
