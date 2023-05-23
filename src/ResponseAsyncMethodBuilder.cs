@@ -39,4 +39,84 @@ namespace TaskLike
             where TStateMachine : IAsyncStateMachine
             => awaiter.UnsafeOnCompleted(stateMachine.MoveNext);
     }
+
+    // Use on a method returning a ValueTask<Response<T>> - [AsyncMethodBuilder(typeof(ResponseAsyncValueTaskCompletionSource<>))]
+    public readonly struct ResponseAsyncValueTaskCompletionSource<T>
+    {
+        public static ResponseAsyncValueTaskCompletionSource<T> Create() => new ResponseAsyncValueTaskCompletionSource<T>();
+
+        private static readonly bool _isResponseType;
+
+        static ResponseAsyncValueTaskCompletionSource()
+        {
+            var t = typeof(T);
+            _isResponseType = t.IsGenericType && !t.IsClass && t.GenericTypeArguments.Length == 1 && t.Name.StartsWith("Response");
+        }
+
+        public ValueTask<T> Task => new ValueTask<T>(_tcs.Task);
+
+        private readonly TaskCompletionSource<T> _tcs;
+
+        public ResponseAsyncValueTaskCompletionSource() { _tcs = new TaskCompletionSource<T>(); }
+
+        public void SetResult(T result) => _tcs.SetResult(result);
+
+        public void SetException(Exception ex) { ex.LogError(); if (_isResponseType) _tcs.SetResult(default(T)); else _tcs.SetException(ex); }
+
+        public void SetStateMachine(IAsyncStateMachine _) { }
+
+        public void Start<TStateMachine>(ref TStateMachine stateMachine)
+            where TStateMachine : IAsyncStateMachine
+            => stateMachine.MoveNext();
+
+        public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine)
+            where TAwaiter : INotifyCompletion
+            where TStateMachine : IAsyncStateMachine
+            => awaiter.OnCompleted(stateMachine.MoveNext);
+
+        public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine)
+            where TAwaiter : ICriticalNotifyCompletion
+            where TStateMachine : IAsyncStateMachine
+            => awaiter.UnsafeOnCompleted(stateMachine.MoveNext);
+    }
+
+    // Use on a method returning a Task<Response<T>> - [AsyncMethodBuilder(typeof(ResponseAsyncTaskCompletionSource<>))]
+    public readonly struct ResponseAsyncTaskCompletionSource<T>
+    {
+        public static ResponseAsyncTaskCompletionSource<T> Create() => new ResponseAsyncTaskCompletionSource<T>();
+
+        private static readonly bool _isResponseType;
+
+        static ResponseAsyncTaskCompletionSource()
+        {
+            var t = typeof(T);
+            _isResponseType = t.IsGenericType && !t.IsClass && t.GenericTypeArguments.Length == 1 && t.Name.StartsWith("Response");
+        }
+
+        public Task<T> Task => _tcs.Task;
+
+        private readonly TaskCompletionSource<T> _tcs;
+
+        public ResponseAsyncTaskCompletionSource() { _tcs = new TaskCompletionSource<T>(); }
+
+        public void SetResult(T result) => _tcs.SetResult(result);
+
+        public void SetException(Exception ex) { ex.LogError(); if (_isResponseType) _tcs.SetResult(default(T)); else _tcs.SetException(ex); }
+
+        public void SetStateMachine(IAsyncStateMachine _) { }
+
+        public void Start<TStateMachine>(ref TStateMachine stateMachine)
+            where TStateMachine : IAsyncStateMachine
+            => stateMachine.MoveNext();
+
+        public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine)
+            where TAwaiter : INotifyCompletion
+            where TStateMachine : IAsyncStateMachine
+            => awaiter.OnCompleted(stateMachine.MoveNext);
+
+        public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine)
+            where TAwaiter : ICriticalNotifyCompletion
+            where TStateMachine : IAsyncStateMachine
+            => awaiter.UnsafeOnCompleted(stateMachine.MoveNext);
+    }
 }
