@@ -21,8 +21,6 @@ namespace TaskLike
             // Many tasks at once.
             Response<int>[] results = await Task.WhenAll(Sandbox().AsTask(), Sandbox()); // Both explicit, and implicit task conversions exist.
 
-            throw new NotImplementedException();
-
             return Response.Create("Hello, World!");
         }
 

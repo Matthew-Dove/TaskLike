@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks.Sources;
 
 namespace TaskLike
@@ -53,7 +54,7 @@ namespace TaskLike
 
         private static readonly bool _isResponseType;
 
-        static ResponseAsyncValueTaskCompletionSource() { _isResponseType = typeof(T).Equals(new Response<T>(default(T)).Value.GetType()); }
+        static ResponseAsyncValueTaskCompletionSource() { _isResponseType = typeof(T).Equals(new Response<T>(default(T)).Value?.GetType()); }
 
         public ValueTask<T> Task => new ValueTask<T>(_tcs.Task);
 
@@ -92,7 +93,7 @@ namespace TaskLike
 
         private static readonly bool _isResponseType;
 
-        static ResponseAsyncTaskCompletionSource() { _isResponseType = typeof(T).Equals(new Response<T>(default(T)).Value.GetType()); }
+        static ResponseAsyncTaskCompletionSource() { _isResponseType = typeof(T).Equals(new Response<T>(default(T)).Value?.GetType()); }
 
         public Task<T> Task => _tcs.Task;
 
@@ -124,6 +125,7 @@ namespace TaskLike
     file sealed class SourceBag<T>
     {
         public T Result;
+        public ExceptionDispatchInfo Error;
         public ValueTaskSourceStatus Status;
         public Action<object> Continuation;
         public object State;
@@ -148,7 +150,6 @@ namespace TaskLike
                     }
                 }
             }
-
             var token = (short)Interlocked.Increment(ref _token);
             _sources.TryAdd(token, new SourceBag<T>());
             return token;
@@ -158,12 +159,23 @@ namespace TaskLike
         {
             _sources.TryGetValue(token, out SourceBag<T> source);
             source.Result = result;
+            source.Status = ValueTaskSourceStatus.Succeeded;
+            source.Continuation(source.State);
+        }
+
+        public void SetException(short token, ExceptionDispatchInfo ex)
+        {
+            _sources.TryGetValue(token, out SourceBag<T> source);
+            source.Error = ex;
+            source.Status = ValueTaskSourceStatus.Faulted;
+            source.Continuation(source.State);
         }
 
         public T GetResult(short token)
         {
             _sources.TryGetValue(token, out SourceBag<T> source);
             _sources.TryRemove(token, out _);
+            if (source.Error is not null) source.Error.Throw();
             return source.Result;
         }
 
@@ -171,13 +183,6 @@ namespace TaskLike
         {
             _sources.TryGetValue(token, out SourceBag<T> source);
             return source.Status;
-        }
-
-        public void SetComplete(short token, bool isSuccessful)
-        {
-            _sources.TryGetValue(token, out SourceBag<T> source);
-            source.Status = isSuccessful ? ValueTaskSourceStatus.Succeeded : ValueTaskSourceStatus.Canceled;
-            source.Continuation(source.State);
         }
 
         public void OnCompleted(Action<object> continuation, object state, short token, ValueTaskSourceOnCompletedFlags flags)
@@ -197,7 +202,7 @@ namespace TaskLike
 
         static ResponseAsyncValueTaskSource()
         {
-            _isResponseType = typeof(T).Equals(new Response<T>(default(T)).Value.GetType());
+            _isResponseType = typeof(T).Equals(new Response<T>(default(T)).Value?.GetType());
             _source = new ValueTaskSource<T>();
         }
 
@@ -206,24 +211,13 @@ namespace TaskLike
 
         public ResponseAsyncValueTaskSource() { _token = _source.GetNextToken(); }
 
-        public void SetResult(T result)
-        {
-            _source.SetResult(_token, result);
-            _source.SetComplete(_token, true);
-        }
+        public void SetResult(T result) { _source.SetResult(_token, result); }
 
         public void SetException(Exception ex)
         {
             ex.LogError();
-            if (_isResponseType)
-            {
-                _source.SetResult(_token, default(T));
-                _source.SetComplete(_token, true);
-            }
-            else
-            {
-                _source.SetComplete(_token, false);
-            }
+            if (_isResponseType) _source.SetResult(_token, default(T));
+            else _source.SetException(_token, ExceptionDispatchInfo.Capture(ex));
         }
 
         public void SetStateMachine(IAsyncStateMachine _) { }
