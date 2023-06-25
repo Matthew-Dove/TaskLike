@@ -5,7 +5,7 @@
 ## Intro
 
 This mini project is an example of creating a custom `Task<T>` like type, by implementing an Awaiter, and a AsyncMethodBuilder for a custom task-like type.  
-Here we create a `Task` type that catches, and logs all errors coming from a `async` function.  
+We create a `Task` type that catches, and logs all errors coming from a `async` function.  
 
 For more info see:  
 * [AsyncMethodBuilder](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/proposals/csharp-10.0/async-method-builders)
@@ -70,9 +70,9 @@ You can also convert `ResponseAsync<T>` into `Task<Response<T>>`, so you can use
 
 ## Remarks
 
-This very simple project demonstrates some interesting `Task` types we are able to create in `C#`.  
-While `ResponseAsync<T>` only cares about handling exceptions, you could make many different types.  
-For example you could time the duration between each `await` call for some free audit logging.  
+This project demonstrates some interesting `Task` types we are able to create in `C#`.  
+While `ResponseAsync<T>` only cares about handling exceptions (_and removing null return values_), you could make many different types.  
+For example you could time the duration between each `await` call for some audit logging.  
 You could modify thread settings before / after each `await` in a function (*i.e. setting the culture, or user, or cache, etc*).  
 With the custom awaiters you can convert the type on the right of the `await` into whatever type you like on the left.  
 For example you could `Trim` all strings, and set them to uppercase (*idk why you would, but you could!*).  

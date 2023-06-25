@@ -4,15 +4,15 @@ namespace TaskLike
 {
     public class PlayGround
     {
-        [AsyncMethodBuilder(typeof(ResponseAsyncValueTaskSource<>))]
-        public async ValueTask<Response<string>> Play() // ValueTaskAwaiter with custom async method builder.
+        [AsyncMethodBuilder(typeof(ResponseAsyncTaskCompletionSource<>))] // Use a custom builder.
+        public async Task<Response<string>> Play() // TaskAwaiter with custom async method builder.
         {
             // Happy path.
             var response = await Sandbox(); // ResponseAsyncAwaiter
             Console.WriteLine($"Response.IsValid: {response.IsValid}, Response.Value: {response.GetValueOrDefault(0)}.");
 
             // Synchronous example when the value is known.
-            Console.WriteLine(ResponseAsync<int>.FromResult(42).GetAwaiter().GetResult().ToString());
+            Console.WriteLine(ResponseAsync.FromResult(42).GetAwaiter().GetResult().ToString());
 
             // Error handling.
             await ThrowError01();

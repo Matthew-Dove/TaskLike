@@ -12,23 +12,12 @@ namespace TaskLike
 
         private readonly ResponseAsync<T> _response;
 
-        internal ResponseAsyncAwaiter(ResponseAsync<T> response)
-        {
-            _response = response;
-        }
+        public ResponseAsyncAwaiter(ResponseAsync<T> response) { _response = response; }
 
         public void UnsafeOnCompleted(Action continuation) => OnCompleted(continuation);
 
-        public void OnCompleted(Action continuation)
-        {
-            _response.Wait(); // Wait for the value to be generated, or for some exception.
-            continuation(); // Get the final result.
-        }
+        public void OnCompleted(Action continuation) => _response.OnCompleted(continuation);
 
-        public Response<T> GetResult()
-        {
-            _response.Wait(); // Callers may skip using await, and use this.GetAwaiter().GetResult() instead, so we need to call Wait() here too.
-            return _response.GetValue(); // Gets the value, or an invalid response when an exception was set instead of a value.
-        }
+        public Response<T> GetResult() => _response.GetValue();
     }
 }
